@@ -21,7 +21,7 @@ struct gpt_params {
     // sampling parameters
     int32_t top_k = 40; // unused
     float   top_p = 0.95f;
-    float   temp  = 0.80f;
+    float   temp  = 0.10f;
     float   repeat_penalty  = 1.30f;
 
     int32_t n_batch = 8; // batch size for prompt processing
