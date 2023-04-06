@@ -86,3 +86,10 @@ jobs:
           xcodebuild -exportArchive -archivePath "Bloomer.xcarchive" -exportPath "." -exportOptionsPlist "$RUNNER_TEMP/exportOptions.plist"
           ls -latrh
         working-directory: Bloomer
+      - name: Upload release build
+        uses: actions/upload-artifact@v3
+        with:
+          name: Bloomer.ipa
+          path: |
+            Bloomer/Bloomer.ipa
+
