@@ -1,6 +1,5 @@
 name: Xcode - Build and Analyze
 
-
 on:
   push:
 
@@ -23,6 +22,58 @@ jobs:
         run: |
           wget -q https://huggingface.co/nouamanetazi/bloomz-560m-ggml/resolve/main/ggml-model-bloomz-560m-f16.bin
         working-directory: Bloomer/Bloomer
+      - name: Create provisioning profile and certificate
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_MOBILE_PROVISION_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          PP_ID: 2e12e20b-0181-4189-81b5-5dc4eea4e09b
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/${PP_ID}.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          # import certificate and provisioning profile from secrets
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+          cat << EOF > $RUNNER_TEMP/exportOptions.plist
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+              <key>compileBitcode</key>
+              <false/>
+              <key>method</key>
+              <string>enterprise</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                <key>com.pcuenca.Bloomer</key>
+                <string>$PP_ID</string>
+              </dict>
+              <key>signingCertificate</key>
+              <string>iPhone Distribution</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>stripSwiftSymbols</key>
+              <true/>
+              <key>teamID</key>
+              <string>2FLRSSAJ72</string>
+              <key>thinning</key>
+              <string>&lt;none&gt;</string>
+            </dict>
+            </plist>
+          EOF
       - name: Build
         env:
           scheme: ${{ 'default' }}
@@ -31,5 +82,6 @@ jobs:
           if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \\.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \\.xcodeproj\$`"; fi
           file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
           xcodebuild clean archive -scheme "$scheme" -archivePath "Bloomer.xcarchive" -destination "generic/platform=iOS" CODE_SIGN_STYLE=Manual COMPILER_INDEX_STORE_ENABLE=NO -quiet -"$filetype_parameter" "$file_to_build"
+          xcodebuild -exportArchive -archivePath "Bloomer.xcarchive" -exportPath "." -exportOptionsPlist "$RUNNER_TEMP/exportOptions.plist"
+          ls -latrh
         working-directory: Bloomer
-
