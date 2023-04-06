@@ -20,7 +20,7 @@ jobs:
         working-directory: Bloomer
       - name: Download huggingface model
         run: |
-          wget https://huggingface.co/nouamanetazi/bloomz-560m-ggml/resolve/main/ggml-model-bloomz-560m-f16.bin
+          wget -q https://huggingface.co/nouamanetazi/bloomz-560m-ggml/resolve/main/ggml-model-bloomz-560m-f16.bin
         working-directory: Bloomer/Bloomer
       - name: Build
         env:
