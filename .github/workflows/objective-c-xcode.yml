@@ -18,10 +18,6 @@ jobs:
           echo $default | cat >default
           echo Using default scheme: $default
         working-directory: Bloomer
-      - name: Download huggingface model
-        run: |
-          wget -q https://huggingface.co/nouamanetazi/bloomz-560m-ggml/resolve/main/ggml-model-bloomz-560m-f16.bin
-        working-directory: Bloomer/Bloomer
       - name: Create provisioning profile and certificate
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_BASE64 }}
@@ -74,6 +70,11 @@ jobs:
             </dict>
             </plist>
           EOF
+      - name: Download huggingface model
+        run: |
+          wget -q https://huggingface.co/nouamanetazi/bloomz-560m-ggml/resolve/main/ggml-model-bloomz-560m-f16.bin
+        working-directory: Bloomer/Bloomer
+
       - name: Build
         env:
           scheme: ${{ 'default' }}
